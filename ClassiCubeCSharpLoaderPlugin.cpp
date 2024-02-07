@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <msclr/gcroot.h>
 
 extern "C" {
 #include "src/Chat.h"
@@ -13,14 +14,60 @@ extern "C" {
 #endif
 
 
-using namespace System;
+#using <System.dll>
+#using <System.Runtime.dll>
 
-static void TestPlugin_Init(void) {
-	cc_string msg = String_FromConst("Hello world!");
-	Chat_Add(&msg);
+using namespace System;
+using namespace System::Reflection;
+using namespace msclr;
+
+
+gcroot<Assembly^> assembly = nullptr;
+
+
+void callMethod(String^ methodName) {
+    if (static_cast<Assembly^>(assembly) == nullptr) {
+        assembly = System::Reflection::Assembly::LoadFile("F:\\ClassiCube\\plugins-csharp\\csharp-classicube-plugin.dll");
+    }
+
+    array<Type^>^ typeArray = assembly->GetTypes();
+    // classes
+    for (int i = 0; i < typeArray->Length; i++) {
+        auto initFn = typeArray[i]->GetMethod(methodName);
+
+        if (initFn) {
+            initFn->Invoke(nullptr, nullptr);
+        }
+    }
+}
+
+void Init() {
+    callMethod("Init");
+}
+
+void Free() {
+    callMethod("Free");
+}
+
+void Reset() {
+    callMethod("Reset");
+}
+
+void OnNewMap() {
+    callMethod("OnNewMap");
+}
+
+void OnNewMapLoaded() {
+    callMethod("OnNewMapLoaded");
 }
 
 extern "C" {
 	EXPORT int Plugin_ApiVersion = 1;
-	EXPORT struct IGameComponent Plugin_Component = { TestPlugin_Init };
+	EXPORT struct IGameComponent Plugin_Component = {
+		Init,
+		Free,
+		Reset,
+		OnNewMap,
+		OnNewMapLoaded
+    };
 }
